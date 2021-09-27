@@ -75,8 +75,18 @@ module fulladder (S,C,x,y,z);
    or g1(C,D2,D1); 
 endmodule 
 
+module mux2x1(A,B,select,OUT);
+	input A,B,select;
+	output OUT;
+	wire w1,w2,nselect;
+	not(nselect,select);
+	and(w1,select,A);
+	and(w2,nselect,B);
+	or(OUT,w1,w2);
+endmodule
 
-module mux2x1(A,B,select,OUT); 
+//behavioral
+module behavioralmux2x1(A,B,select,OUT); 
    input A,B,select; 
    output OUT; 
    reg OUT; 

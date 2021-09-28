@@ -1,0 +1,44 @@
+module D_flip_flop(D,CLK,Q);
+   input D,CLK; 
+   output Q; 
+   wire CLK1, Y;
+   not  not1 (CLK1,CLK);
+   D_latch D1(D,CLK, Y),
+           D2(Y,CLK1,Q);
+endmodule 
+
+
+module D_latch(D,C,Q);
+   input D,C; 
+   output Q;
+   wire x,y,D1,Q1; 
+   nand nand1 (x,D, C), 
+        nand2 (y,D1,C), 
+        nand3 (Q,x,Q1),
+        nand4 (Q1,y,Q); 
+   not  not1  (D1,D);
+endmodule
+
+module register (Instruction,IR,CLK);
+   input [15:0] Instruction;
+   input CLK;
+   output [15:0] IR;
+
+// add D flip-flops here  
+    D_flip_flop d0(Instruction[0], CLK, IR[0]),
+                d1(Instruction[1], CLK, IR[1]),
+                d2(Instruction[2], CLK, IR[2]),
+                d3(Instruction[3], CLK, IR[3]),
+                d4(Instruction[4], CLK, IR[4]),
+                d5(Instruction[5], CLK, IR[5]),
+                d6(Instruction[6], CLK, IR[6]),
+                d7(Instruction[7], CLK, IR[7]),
+                d8(Instruction[8], CLK, IR[8]),
+                d9(Instruction[9], CLK, IR[9]),
+                d10(Instruction[10], CLK, IR[10]),
+                d11(Instruction[11], CLK, IR[11]),
+                d12(Instruction[12], CLK, IR[12]),
+                d13(Instruction[13], CLK, IR[13]),
+                d14(Instruction[14], CLK, IR[14]),
+                d15(Instruction[15], CLK, IR[15]);
+endmodule

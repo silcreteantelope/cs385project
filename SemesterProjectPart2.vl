@@ -1,0 +1,357 @@
+// Gate Level model of MIPS - single cycle implementation
+
+//Regester file holds the the 16 bit instructions and is where the 16 bit result is written.
+module reg_file (RR1,RR2,WR,WD,RegWrite,RD1,RD2,clock);
+
+  input [1:0] RR1,RR2,WR;
+  input [15:0] WD;
+  input RegWrite,clock;
+  output [15:0] RD1,RD2;
+
+  reg [15:0] Regs[0:3];
+
+  assign RD1 = Regs[RR1];
+  assign RD2 = Regs[RR2];
+
+  initial Regs[0] = 0;
+
+  always @(negedge clock)
+    if (RegWrite==1 & WR!=0) 
+	Regs[WR] <= WD;
+
+endmodule
+
+//The Alu performs the logic necessary for the instructions to be implemented correctly
+module alu (op,a,b,result,zero);
+   input [15:0] a;
+   input [15:0] b;
+   input [2:0] op;
+   output [15:0] result;
+   output zero;
+   wire c1,c2,c3,c4,c5,c6,c7,c8,c9,c10,c11,c12,c13,c14,c15,c16;
+	
+   ALU1   alu0 (a[0],b[0],op[2],op[1:0],set,op[2],c1,result[0]);
+   ALU1   alu1 (a[1],b[1],op[2],op[1:0],1'd0,  c1,   c2,result[1]);
+   ALU1   alu2 (a[2],b[2],op[2],op[1:0],1'd0,  c2,   c3,result[2]);
+   ALU1   alu3 (a[3],b[3],op[2],op[1:0],1'd0,  c3,   c4,result[3]);
+   ALU1   alu4 (a[4],b[4],op[2],op[1:0],1'd0,  c4,   c5,result[4]);
+   ALU1   alu5 (a[5],b[5],op[2],op[1:0],1'd0,  c5,   c6,result[5]);
+   ALU1   alu6 (a[6],b[6],op[2],op[1:0],1'd0,  c6,   c7,result[6]);
+   ALU1   alu7 (a[7],b[7],op[2],op[1:0],1'd0,  c7,   c8,result[7]);
+   ALU1   alu8 (a[8],b[8],op[2],op[1:0],1'd0,  c8,   c9,result[8]);
+   ALU1   alu9 (a[9],b[9],op[2],op[1:0],1'd0,  c9,   c10,result[9]);
+   ALU1   alu10 (a[10],b[10],op[2],op[1:0],1'd0,  c10,   c11,result[10]);
+   ALU1   alu11 (a[11],b[11],op[2],op[1:0],1'd0,  c11,   c12,result[11]);
+   ALU1   alu12 (a[12],b[12],op[2],op[1:0],1'd0,  c12,   c13,result[12]);
+   ALU1   alu13 (a[13],b[13],op[2],op[1:0],1'd0,  c13,   c14,result[13]);
+   ALU1   alu14 (a[14],b[14],op[2],op[1:0],1'd0,  c14,   c15,result[14]);
+   ALUmsb alu15 (a[15],b[15],op[2],op[1:0],1'd0,  c15,   c16,result[15],set);
+
+   or or1(or01, result[0],result[1]);
+   or or2(or23, result[2],result[3]);
+   or or3(or45, result[4],result[5]);
+   or or4(or67, result[6],result[7]);
+   or or5(or89, result[8],result[9]);
+   or or6(or1011, result[10],result[11]);
+   or or7(or1213, result[12],result[13]);
+   or or8(or1415, result[14],result[15]);
+   or or9(or1, or01, or23);
+   or or10(or2, or45, or67);
+   or or11(or3, or89, or1011);
+   or or12(or4, or1213, or1415);
+   or or13(or5, or1, or2);
+   or or14(or6, or3, or4);
+   nor nor1(zero,or5,or6);
+
+endmodule
+
+
+// 1-bit ALU for bits 0-2
+
+module ALU1 (a,b,binvert,op,less,carryin,carryout,result);
+   input a,b,less,carryin,binvert;
+   input [1:0] op;
+   output carryout,result;
+   wire sum, a_and_b, a_or_b, b_inv;
+	
+   not not1(b_inv, b);
+   mux2x1 mux1(b,b_inv,binvert,b1);
+   and and1(a_and_b, a, b);
+   or or1(a_or_b, a, b);
+   fulladder adder1(sum,carryout,a,b1,carryin);
+   mux4x1 mux2(a_and_b,a_or_b,sum,less,op[1:0],result); 
+
+endmodule
+
+
+// 1-bit ALU for the most significant bit
+
+module ALUmsb (a,b,binvert,op,less,carryin,carryout,result,sum);
+   input a,b,less,carryin,binvert;
+   input [1:0] op;
+   output carryout,result,sum;
+   wire sum, a_and_b, a_or_b, b_inv;
+	
+   not not1(b_inv, b);
+   mux2x1 mux1(b,b_inv,binvert,b1);
+   and and1(a_and_b, a, b);
+   or or1(a_or_b, a, b);
+   fulladder adder1(sum,carryout,a,b1,carryin);
+   mux4x1 mux2(a_and_b,a_or_b,sum,less,op[1:0],result); 
+
+endmodule
+
+
+module halfadder (S,C,x,y); 
+   input x,y; 
+   output S,C; 
+
+   xor (S,x,y); 
+   and (C,x,y); 
+endmodule 
+
+
+module fulladder (S,C,x,y,z); 
+   input x,y,z; 
+   output S,C; 
+   wire S1,D1,D2;
+
+   halfadder HA1 (S1,D1,x,y), 
+             HA2 (S,D2,S1,z); 
+   or g1(C,D2,D1); 
+endmodule 
+
+module mux2x1(A,B,select,OUT);
+   input A,B,select; 
+   output OUT;
+   wire w1, w2, w3;
+   
+   not n1(w1, select);
+   
+   and a1(w2, A, w1),
+       a2(w3, B, select);
+       
+   or o1(OUT, w2, w3);
+   
+endmodule
+
+module mux2x1_2(A,B,select,OUT);
+   input [1:0] A,B;
+   input select; 
+   output [1:0] OUT;
+   
+
+   
+   mux2x1 m0(A[0], B[0], select, OUT[0]),
+          m1(A[1], B[1], select, OUT[1]);
+   
+   
+   
+endmodule
+
+module mux4x1(i0,i1,i2,i3,select,y);
+	input i0,i1,i2,i3; 
+	input [1:0] select; 
+	output y; 
+	wire w1,w2, w3, w4, w5, w6;
+	not n1(w1, select[0]),
+	    n2(w2, select[1]);
+	and a1(w3, i0, w1, w2),
+	    a2(w4, i1, select[0], w2),
+	    a3(w5, i2, w1, select[1]),
+	    a4(w6, i3, select[0], select[1]);
+	or  o1(y, w3, w4, w5, w6);
+	
+endmodule
+
+module mux16x2x1(A,B,select,OUT);
+   input [15:0] A,B;
+   input select; 
+   output [15:0] OUT;
+   
+
+   
+   mux2x1 m0(A[0], B[0], select, OUT[0]),
+          m1(A[1], B[1], select, OUT[1]),
+          m2(A[2], B[2], select, OUT[2]),
+          m3(A[3], B[3], select, OUT[3]),
+          m4(A[4], B[4], select, OUT[4]),
+          m5(A[5], B[5], select, OUT[5]),
+          m6(A[6], B[6], select, OUT[6]),
+          m7(A[7], B[7], select, OUT[7]),
+          m8(A[8], B[8], select, OUT[8]),
+          m9(A[9], B[9], select, OUT[9]),
+          m10(A[10], B[10], select, OUT[10]),
+          m11(A[11], B[11], select, OUT[11]),
+          m12(A[12], B[12], select, OUT[12]),
+          m13(A[13], B[13], select, OUT[13]),
+          m14(A[14], B[14], select, OUT[14]),
+          m15(A[15], B[15], select, OUT[15]);
+   
+   
+   
+endmodule
+
+/*module mux4x1(i0,i1,i2,i3,select,y);
+	input i0,i1,i2,i3; 
+	input [1:0] select; 
+	output y; 
+	wire w1,w2;
+	mux2x1 mux1(i0,i1,select[0],w1),
+		mux2(i2,i3,select[0],w2),
+		mux3(w1,w2,select[1],y);
+endmodule*/
+
+/*module behavioralmux4x1(i0,i1,i2,i3,select,y); 
+   input i0,i1,i2,i3; 
+   input [1:0] select; 
+   output y; 
+   reg y; 
+   always @ (i0 or i1 or i2 or i3 or select) 
+            case (select) 
+               2'b00: y = i0; 
+               2'b01: y = i1; 
+               2'b10: y = i2; 
+               2'b11: y = i3; 
+            endcase 
+endmodule */
+
+// The Main Control determines the operations being performed and determines which parts of the mips machine are activated with a Control function.
+module MainControl (Op,Control); 
+
+  input [3:0] Op;
+  output reg [5:0] Control;
+// Control bits: RegDst,ALUSrc,RegWrite,ALUOp
+  always @(Op) case (Op)
+    4'b0101: Control <= 6'b011010; // ADDI
+    4'b0010: Control <= 6'b101000; // AND
+	4'b0001: Control <= 6'b101110; // SUB
+	4'b0011: Control <= 6'b101001; // OR
+	4'b0000: Control <= 6'b101010; // ADD
+	4'b0100: Control <= 6'b101111; // SLT
+	4'b0111: Control <= 6'b011000; //ANDI 
+	4'b0110: Control <= 6'b011111; //SLTI
+	4'b1000: Control <= 6'b011001; //ORI
+	4'b1001: Control <= 6'b011011; //LW
+	4'b1010: Control <= 6'b011100; //SW
+	4'b1011: Control <= 6'b011100; //BEQ
+	4'b1100: Control <= 6'b011101; //BNE
+	
+  endcase
+
+endmodule
+
+
+// The CPU holds the input and sends it through the cycle
+// Extra instructions were added in Imemory to test the addition I-type operations.
+module CPU (clock,PC,ALUOut,IR);
+
+  input clock;
+  output [15:0] ALUOut,IR,PC;
+  reg[15:0] PC;
+  reg[15:0] IMemory[0:1023];
+  wire [15:0] IR,NextPC,A,B,ALUOut,RD2,SignExtend,PCplus4,Target;
+  wire [2:0] ALUctl;
+  wire [1:0] WR; 
+
+// Test Program:
+  initial begin 
+    IMemory[0] = 16'b 0101_00_01_00001111;  // addi $t1, $0,  15   ($t1=15)
+    IMemory[1] = 16'b 0101_00_10_00000111;  // addi $t2, $0,  7    ($t2= 7)
+    IMemory[2] = 16'b 0010_01_10_11_000000;  // and  $t3, $t1, $t2  ($t3= 7)
+	IMemory[3] = 16'b 0001_01_11_10_000000;  // sub  $t2, $t1, $t3  ($t2= 8)
+	IMemory[4] = 16'b 0011_10_11_10_000000;  // or   $t2, $t2, $t3  ($t2=15)
+	IMemory[5] = 16'b 0000_10_11_11_000000;  // add  $t3, $t2, $t3  ($t3=22)
+	IMemory[6] = 16'b 0100_11_10_01_000000;  // slt  $t1, $t3, $t2  ($t1= 0)
+	IMemory[7] = 16'b 0100_10_11_01_000000;  // slt  $t1, $t2, $t3  ($t1= 1)
+	IMemory[8] = 16'b 0101_00_01_00001111;  // addi $t1, $0,  15   ($t1=15)
+	IMemory[9] = 16'b 0111_01_10_00001011;  // andi $t2, $t1,  11   ($t2=11)
+	IMemory[10] = 16'b 1000_01_10_00000100;  // ori $t1, $t2,  8   ($t3=15)
+	IMemory[11] = 16'b 0110_01_10_00011111;  // sltii $t2, $t1,  31   ($t2=1)
+	IMemory[12] = 16'b 0110_11_10_00000111;  // addi $t2, $t3,  7   ($t2=0)
+	IMemory[13] = 16'b 1001_00__	
+
+/*    
+
+These Need to be changed to 16 bit binary like the above with Type instructions, check course blackboard
+
+	IMemory[3] = 32'h012b5022;  // sub  $t2, $t1, $t3  ($t2= 8)
+    IMemory[4] = 32'h014b5025;  // or   $t2, $t2, $t3  ($t2=15)
+    IMemory[5] = 32'h014b5820;  // add  $t3, $t2, $t3  ($t3=22)
+    IMemory[6] = 32'h016a482a;  // slt  $t1, $t3, $t2  ($t1= 0)
+    IMemory[7] = 32'h014b482a;  // slt  $t1, $t2, $t3  ($t1= 1)
+*/
+  end
+
+  initial PC = 0;
+
+  assign IR = IMemory[PC>>1];
+
+  mux2x1_2 m0 (IR[9:8], IR[7:6], RegDst, WR);
+
+  
+  mux16x2x1 m1(RD2, SignExtend, ALUSrc, B);
+
+
+  assign SignExtend = {{8{IR[7]}},IR[7:0]}; // sign extension unit
+
+  reg_file rf (IR[11:10],IR[9:8],WR,ALUOut,RegWrite,A,RD2,clock);
+
+  alu fetch (3'b010,PC,16'd2,NextPC,Unused);
+
+  alu ex (ALUctl, A, B, ALUOut, Zero);
+  alu branch (3'b010,SignExtend<<2,PCplus4,Target,Unused2);
+  MainControl MainCtr (IR[15:12],{RegDst,ALUSrc,RegWrite,ALUctl}); 
+
+
+  always @(negedge clock) begin 
+    PC <= NextPC;
+  end
+
+endmodule
+
+
+// Test module
+
+module test ();
+
+  reg clock;
+  wire [15:0] WD,IR,PC;
+
+  CPU test_cpu(clock,PC,WD,IR);
+
+  always #1 clock = ~clock;
+  
+  initial begin
+    $display ("clock PC    IR                                 WD");
+    $monitor ("%b     %2d    %b                   %2d", clock,PC,IR,WD);
+    clock = 1;
+    #24 $finish;
+  end
+
+endmodule
+
+
+/* Compiling and simulation
+
+>iverilog mips-r-type+addi.vl
+
+>vvp a.out
+
+clock PC    IR                                 WD
+1      0    00100000000010010000000000001111   15
+0      4    00100000000010100000000000000111    7
+1      4    00100000000010100000000000000111    7
+0      8    00000001001010100101100000100100    7
+1      8    00000001001010100101100000100100    7
+0     12    00000001001010110101000000100010    8
+1     12    00000001001010110101000000100010    8
+0     16    00000001010010110101000000100101   15
+1     16    00000001010010110101000000100101   15
+0     20    00000001010010110101100000100000   22
+1     20    00000001010010110101100000100000   22
+0     24    00000001011010100100100000101010    0
+1     24    00000001011010100100100000101010    0
+0     28    00000001010010110100100000101010    1
+1     28    00000001010010110100100000101010    1
+*/
